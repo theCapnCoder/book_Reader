@@ -19,6 +19,11 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <h1>Main Layout</h1>
+        <div>
+          <button>
+            <Link href={"/home"}>Home</Link>
+          </button>
+        </div>
         {children}
       </body>
     </html>

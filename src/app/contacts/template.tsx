@@ -3,7 +3,7 @@
 const MyTemplate = ({ children }: { children: React.ReactNode }) => {
   console.log("template");
   return (
-    <div className="bg-red-400">
+    <div>
       <h2>Template</h2>
       {children}
     </div>
