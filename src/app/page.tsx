@@ -10,6 +10,16 @@ export default function Home() {
           </Link>
         </li>
         <li>
+          <Link href="/users" className="border-4 p-2">
+            Users
+          </Link>
+        </li>
+        <li>
+          <Link href="/posts" className="border-4 p-2">
+            Posts
+          </Link>
+        </li>
+        <li>
           <Link href="/about" className="border-4 p-2">
             About
           </Link>
