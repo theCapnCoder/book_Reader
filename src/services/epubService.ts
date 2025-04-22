@@ -121,4 +121,40 @@ export class EpubService {
     }
     return null;
   }
+
+  /**
+   * Extracts the HTML content of a chapter from an EPUB file given its href.
+   * @param file - EPUB file as ArrayBuffer or File
+   * @param href - The href of the chapter (from TOC)
+   * @returns HTML content string or null if not found
+   */
+  static async getChapterContent(file: ArrayBuffer | File, href: string): Promise<string | null> {
+    let arrayBuffer: ArrayBuffer;
+    if (file instanceof File) {
+      arrayBuffer = await file.arrayBuffer();
+    } else {
+      arrayBuffer = file;
+    }
+    const zip = await JSZip.loadAsync(arrayBuffer);
+    // Find the path to the OPF file
+    const containerXml = await zip.file("META-INF/container.xml")?.async("string");
+    if (!containerXml) return null;
+    const opfPathMatch = containerXml.match(/full-path=["']([^"']+)["']/);
+    if (!opfPathMatch) return null;
+    const opfPath = opfPathMatch[1];
+    // Resolve href (may be relative to OPF)
+    let chapterPath = href;
+    if (!/^[\/]/.test(href) && opfPath.includes("/")) {
+      chapterPath = opfPath.substring(0, opfPath.lastIndexOf("/") + 1) + href;
+    }
+    // Some hrefs may have a fragment (e.g. chapter.xhtml#section1), remove it
+    chapterPath = chapterPath.split('#')[0];
+    // Try to read the chapter file as string
+    const chapterFile = zip.file(chapterPath);
+    if (!chapterFile) return null;
+    const content = await chapterFile.async("string");
+    // Optionally, extract only the <body>...</body> part for cleaner display
+    const bodyMatch = content.match(/<body[\s\S]*?>([\s\S]*?)<\/body>/i);
+    return bodyMatch ? bodyMatch[1] : content;
+  }
 }

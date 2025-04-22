@@ -2,8 +2,8 @@
 
 import React, { useRef, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { EpubService } from "../services/epubService";
-import { EpubTocItem } from "../types/epub";
+import { EpubService } from "../../services/epubService";
+import { EpubTocItem } from "../../types/epub";
 
 export default function Book() {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -104,17 +104,21 @@ export default function Book() {
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col items-center py-8 px-2">
       <div className="w-full h-full bg-white rounded-none shadow-none p-0 m-0 flex flex-col flex-1">
-        <div className="flex flex-col sm:flex-row items-center gap-4 mb-6">
+        <div className="relative flex flex-col sm:flex-row items-center gap-4 mb-6 w-full min-h-[48px]">
           <input
             type="file"
             accept=".epub"
             ref={fileInputRef}
             onChange={handleFileChange}
-            className="border rounded p-2 w-full sm:w-auto"
+            className="border rounded p-2 w-full sm:w-auto z-10"
           />
+          {bookTitle && (
+            <h2 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-xl font-semibold text-gray-800 whitespace-nowrap m-0 p-0">
+              {bookTitle}
+            </h2>
+          )}
         </div>
         {error && <div className="text-red-600 text-center mb-4">{error}</div>}
-        {bookTitle && <h2 className="text-xl font-semibold text-center text-gray-800 mb-4">{bookTitle}</h2>}
         {/* TOC view */}
         {!hrefParam && toc && (
           <div className="mb-6 w-full">
