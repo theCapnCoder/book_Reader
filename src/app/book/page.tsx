@@ -4,6 +4,7 @@ import React, { useRef, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { EpubService } from "../../services/epubService";
 import { EpubTocItem } from "../../types/epub";
+import { translateText } from "../../services/translationService";
 
 export default function Book() {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -17,6 +18,8 @@ export default function Book() {
   const searchParams = useSearchParams();
   const hrefParam = searchParams.get("href");
   const [selectedChapter, setSelectedChapter] = useState<EpubTocItem | null>(null);
+  const [translations, setTranslations] = useState<{ [idx: number]: string }>({});
+  const [loadingIndices, setLoadingIndices] = useState<Set<number>>(new Set());
 
   // Reset all state on file change
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -100,6 +103,32 @@ export default function Book() {
     </ul>
   );
 
+  // Helper to extract visible text from HTML
+  function extractVisibleSentences(html: string): string[] {
+    // Remove tags and decode entities (simple)
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    const text = tmp.textContent || tmp.innerText || '';
+    // Split into sentences (naive)
+    return text.match(/[^.!?\n]+[.!?\n]+|[^.!?\n]+$/g) || [];
+  }
+
+  // Handler for translation
+  const handleTranslate = async (sentence: string, idx: number) => {
+    if (loadingIndices.has(idx)) return;
+    setLoadingIndices(prev => new Set(prev).add(idx));
+    try {
+      const translated = await translateText(sentence, "sentence");
+      setTranslations(prev => ({ ...prev, [idx]: translated }));
+    } finally {
+      setLoadingIndices(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(idx);
+        return newSet;
+      });
+    }
+  };
+
   // Main render
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col items-center py-8 px-2">
@@ -143,7 +172,31 @@ export default function Book() {
               <div className="prose prose-lg max-w-none w-full bg-gray-100 p-4 rounded shadow-inner min-h-[120px]">
                 <h3 className="text-lg font-bold text-indigo-700 mb-3">{selectedChapter?.label}</h3>
                 {chapterContent ? (
-                  <div dangerouslySetInnerHTML={{ __html: chapterContent }} />
+                  <div className="flex flex-col">
+                    {extractVisibleSentences(chapterContent).map((sentence, idx) => (
+                      <div key={idx} className="mb-2">
+                        <div className="flex items-center gap-2 justify-between">
+                          <span>{sentence.trim()}</span>
+                          <button
+                            className="ml-2 text-blue-600 hover:text-blue-900"
+                            onClick={() => handleTranslate(sentence, idx)}
+                            disabled={loadingIndices.has(idx)}
+                            title="Translate sentence"
+                          >
+                            {loadingIndices.has(idx)
+                              ? <span role="img" aria-label="loading">⏳</span>
+                              : translations[idx]
+                                ? <span role="img" aria-label="done">✅</span>
+                                : <span role="img" aria-label="translate">🌐</span>
+                            }
+                          </button>
+                        </div>
+                        {translations[idx] && (
+                          <div className="text-gray-500 text-base leading-snug mt-1">{translations[idx]}</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 ) : (
                   <div className="text-gray-500">No content loaded.</div>
                 )}
