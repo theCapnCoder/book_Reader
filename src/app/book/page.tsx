@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { EpubService } from "../../services/epubService";
 import { EpubTocItem } from "../../types/epub";
 import { translateText } from "../../services/translationService";
+import { FiSettings, FiGlobe, FiCheck, FiLoader } from "react-icons/fi";
 
 export default function Book() {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -20,8 +21,11 @@ export default function Book() {
   const [selectedChapter, setSelectedChapter] = useState<EpubTocItem | null>(null);
   const [translations, setTranslations] = useState<{ [idx: number]: string }>({});
   const [loadingIndices, setLoadingIndices] = useState<Set<number>>(new Set());
+  const [paragraphTranslations, setParagraphTranslations] = useState<{ [idx: number]: string }>({});
+  const [paragraphLoadingIndices, setParagraphLoadingIndices] = useState<Set<number>>(new Set());
+  const [showSettings, setShowSettings] = useState(false);
+  const [showOriginal, setShowOriginal] = useState(false);
 
-  // Reset all state on file change
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setError(null);
     setBookTitle(null);
@@ -44,10 +48,8 @@ export default function Book() {
     }
   };
 
-  // When hrefParam changes, load the chapter content
   useEffect(() => {
     if (!file || !hrefParam || !toc) return;
-    // Find chapter by href
     const findChapter = (items: EpubTocItem[]): EpubTocItem | null => {
       for (const item of items) {
         if (item.href === hrefParam) return item;
@@ -68,18 +70,15 @@ export default function Book() {
       .finally(() => setLoading(false));
   }, [file, hrefParam, toc]);
 
-  // TOC item click navigates to chapter
   const handleChapterClick = (item: EpubTocItem) => {
     if (!item.href) return;
     router.push(`?href=${encodeURIComponent(item.href)}`);
   };
 
-  // Back button navigates to TOC
   const handleBack = () => {
     router.push("/book");
   };
 
-  // Render TOC
   const renderToc = (items: EpubTocItem[]) => (
     <ul className="pl-0">
       {items.map((item, idx) => (
@@ -103,17 +102,25 @@ export default function Book() {
     </ul>
   );
 
-  // Helper to extract visible text from HTML
   function extractVisibleSentences(html: string): string[] {
-    // Remove tags and decode entities (simple)
     const tmp = document.createElement('div');
     tmp.innerHTML = html;
     const text = tmp.textContent || tmp.innerText || '';
-    // Split into sentences (naive)
     return text.match(/[^.!?\n]+[.!?\n]+|[^.!?\n]+$/g) || [];
   }
 
-  // Handler for translation
+  function extractParagraphs(html: string): string[] {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    const paragraphs = Array.from(tmp.querySelectorAll('p')).map(p => p.textContent?.trim() || '').filter(Boolean);
+    // fallback: if no <p> tags, treat the whole text as one paragraph
+    if (paragraphs.length === 0) {
+      const text = tmp.textContent || tmp.innerText || '';
+      return text ? [text] : [];
+    }
+    return paragraphs;
+  }
+
   const handleTranslate = async (sentence: string, idx: number) => {
     if (loadingIndices.has(idx)) return;
     setLoadingIndices(prev => new Set(prev).add(idx));
@@ -129,7 +136,41 @@ export default function Book() {
     }
   };
 
-  // Main render
+  const handleTranslateParagraph = async (paragraph: string, idx: number) => {
+    if (paragraphLoadingIndices.has(idx)) return;
+    setParagraphLoadingIndices(prev => new Set(prev).add(idx));
+    try {
+      const translated = await translateText(paragraph, "sentence");
+      setParagraphTranslations(prev => ({ ...prev, [idx]: translated }));
+    } catch (e) {
+      setParagraphTranslations(prev => ({ ...prev, [idx]: "Translation failed." }));
+    } finally {
+      setParagraphLoadingIndices(prev => {
+        const copy = new Set(prev);
+        copy.delete(idx);
+        return copy;
+      });
+    }
+  };
+
+  const SettingsModal = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-xs relative">
+        <button className="absolute top-2 right-2 text-gray-400 hover:text-gray-600" onClick={() => setShowSettings(false)} title="Close">✕</button>
+        <h2 className="text-lg font-bold mb-4">Settings</h2>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-gray-700">Original text</span>
+          <label className="inline-flex items-center cursor-pointer">
+            <input type="checkbox" className="sr-only peer" checked={showOriginal} onChange={() => setShowOriginal(v => !v)} />
+            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:bg-indigo-600 transition" />
+            <div className="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition peer-checked:translate-x-5" />
+          </label>
+        </div>
+        <div className="text-xs text-gray-500 mt-3">Toggle to switch between original (blurred) and sentence-by-sentence translation modes.</div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col items-center py-8 px-2">
       <div className="w-full h-full bg-white rounded-none shadow-none p-0 m-0 flex flex-col flex-1">
@@ -146,7 +187,15 @@ export default function Book() {
               {bookTitle}
             </h2>
           )}
+          <button
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 p-2"
+            title="Settings"
+            onClick={() => setShowSettings(true)}
+          >
+            <FiSettings className="w-6 h-6" />
+          </button>
         </div>
+        {showSettings && <SettingsModal />}
         {error && <div className="text-red-600 text-center mb-4">{error}</div>}
         {/* TOC view */}
         {!hrefParam && toc && (
@@ -172,31 +221,59 @@ export default function Book() {
               <div className="prose prose-lg max-w-none w-full bg-gray-100 p-4 rounded shadow-inner min-h-[120px]">
                 <h3 className="text-lg font-bold text-indigo-700 mb-3">{selectedChapter?.label}</h3>
                 {chapterContent ? (
-                  <div className="flex flex-col">
-                    {extractVisibleSentences(chapterContent).map((sentence, idx) => (
-                      <div key={idx} className="mb-2">
-                        <div className="flex items-center gap-2 justify-between">
-                          <span>{sentence.trim()}</span>
-                          <button
-                            className="ml-2 text-blue-600 hover:text-blue-900"
-                            onClick={() => handleTranslate(sentence, idx)}
-                            disabled={loadingIndices.has(idx)}
-                            title="Translate sentence"
-                          >
-                            {loadingIndices.has(idx)
-                              ? <span role="img" aria-label="loading">⏳</span>
-                              : translations[idx]
-                                ? <span role="img" aria-label="done">✅</span>
-                                : <span role="img" aria-label="translate">🌐</span>
-                            }
-                          </button>
+                  showOriginal ? (
+                    <div className="prose prose-lg max-w-none w-full text-gray-800">
+                      {extractParagraphs(chapterContent).map((paragraph, idx) => (
+                        <div key={idx} className="mb-1">
+                          <div className="flex items-center gap-2 justify-between">
+                            <span>{paragraph}</span>
+                            <button
+                              className="ml-2 text-blue-600 hover:text-blue-900"
+                              onClick={() => handleTranslateParagraph(paragraph, idx)}
+                              disabled={paragraphLoadingIndices.has(idx)}
+                              title="Translate paragraph"
+                            >
+                              {paragraphLoadingIndices.has(idx)
+                                ? <FiLoader className="animate-spin w-5 h-5" aria-label="loading" />
+                                : paragraphTranslations[idx]
+                                  ? <FiCheck className="text-green-600 w-5 h-5" aria-label="done" />
+                                  : <FiGlobe className="w-5 h-5" aria-label="translate" />
+                              }
+                            </button>
+                          </div>
+                          {paragraphTranslations[idx] && (
+                            <div className="text-gray-500 text-base leading-snug mt-1">{paragraphTranslations[idx]}</div>
+                          )}
                         </div>
-                        {translations[idx] && (
-                          <div className="text-gray-500 text-base leading-snug mt-1">{translations[idx]}</div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col">
+                      {extractVisibleSentences(chapterContent).map((sentence, idx) => (
+                        <div key={idx} className="mb-2">
+                          <div className="flex items-center gap-2 justify-between">
+                            <span>{sentence.trim()}</span>
+                            <button
+                              className="ml-2 text-blue-600 hover:text-blue-900"
+                              onClick={() => handleTranslate(sentence, idx)}
+                              disabled={loadingIndices.has(idx)}
+                              title="Translate sentence"
+                            >
+                              {loadingIndices.has(idx)
+                                ? <FiLoader className="animate-spin w-5 h-5" aria-label="loading" />
+                                : translations[idx]
+                                  ? <FiCheck className="text-green-600 w-5 h-5" aria-label="done" />
+                                  : <FiGlobe className="w-5 h-5" aria-label="translate" />
+                              }
+                            </button>
+                          </div>
+                          {translations[idx] && (
+                            <div className="text-gray-500 text-base leading-snug mt-1">{translations[idx]}</div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )
                 ) : (
                   <div className="text-gray-500">No content loaded.</div>
                 )}
