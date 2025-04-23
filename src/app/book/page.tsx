@@ -8,6 +8,7 @@ import { translateText } from "../../services/translationService";
 import { FiSettings, FiGlobe, FiCheck, FiLoader } from "react-icons/fi";
 import { DEFAULT_WORD_PROMPT, DEFAULT_SENTENCE_PROMPT } from "../../config/translationConfig";
 
+// Version 1.0.0
 // LocalStorage keys
 const WORD_PROMPT_KEY = 'epub_word_prompt';
 const SENTENCE_PROMPT_KEY = 'epub_sentence_prompt';
