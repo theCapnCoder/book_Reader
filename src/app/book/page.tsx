@@ -21,6 +21,8 @@ function SettingsModal({
   showSettings,
   setShowSettings,
   handleConfirmPrompts,
+  showOriginal,
+  setShowOriginal,
 }: {
   pendingWordPrompt: string;
   setPendingWordPrompt: (v: string) => void;
@@ -29,6 +31,8 @@ function SettingsModal({
   showSettings: boolean;
   setShowSettings: (v: boolean) => void;
   handleConfirmPrompts: () => void;
+  showOriginal: boolean;
+  setShowOriginal: (v: boolean) => void;
 }) {
   if (!showSettings) return null;
   return (
@@ -36,6 +40,19 @@ function SettingsModal({
       <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-xs relative">
         <button className="absolute top-2 right-2 text-gray-400 hover:text-gray-600" onClick={() => setShowSettings(false)} title="Close">✕</button>
         <h2 className="text-lg font-bold mb-4">Settings</h2>
+        <div className="mb-4 flex items-center justify-between">
+          <span className="text-gray-700 text-sm">Original text</span>
+          <label className="inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              className="sr-only peer"
+              checked={showOriginal}
+              onChange={() => setShowOriginal(!showOriginal)}
+            />
+            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:bg-indigo-600 transition" />
+            <div className="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition peer-checked:translate-x-5" />
+          </label>
+        </div>
         <div className="mb-3">
           <label className="block text-xs text-gray-500 mb-1">Prompt for word translation:</label>
           <textarea
@@ -360,6 +377,8 @@ export default function Book() {
             showSettings={showSettings}
             setShowSettings={setShowSettings}
             handleConfirmPrompts={handleConfirmPrompts}
+            showOriginal={showOriginal}
+            setShowOriginal={setShowOriginal}
           />
         )}
         {error && <div className="text-red-600 text-center mb-4">{error}</div>}
@@ -387,9 +406,8 @@ export default function Book() {
               <div className="prose prose-lg max-w-none w-full bg-gray-100 p-4 rounded shadow-inner min-h-[120px]">
                 <h3 className="text-lg font-bold text-indigo-700 mb-3">{selectedChapter?.label}</h3>
                 {chapterContent ? (
-                  showOriginal ? (
-                    <div className="prose prose-lg max-w-none w-full text-gray-800">
-                      {extractParagraphs(chapterContent).map((paragraph, idx) => (
+                  showOriginal
+                    ? extractParagraphs(chapterContent).map((paragraph, idx) => (
                         <div key={idx} className="mb-1">
                           <div className="flex items-center gap-2 justify-between">
                             <span>{renderTextWithWordClicks(paragraph)}</span>
@@ -411,11 +429,8 @@ export default function Book() {
                             <div className="text-gray-500 text-base leading-snug mt-1">{paragraphTranslations[idx]}</div>
                           )}
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex flex-col">
-                      {extractVisibleSentences(chapterContent).map((sentence, idx) => (
+                      ))
+                    : extractVisibleSentences(chapterContent).map((sentence, idx) => (
                         <div key={idx} className="mb-2">
                           <div className="flex items-center gap-2 justify-between">
                             <span>{renderTextWithWordClicks(sentence.trim())}</span>
@@ -437,9 +452,7 @@ export default function Book() {
                             <div className="text-gray-500 text-base leading-snug mt-1">{translations[idx]}</div>
                           )}
                         </div>
-                      ))}
-                    </div>
-                  )
+                      ))
                 ) : (
                   <div className="text-gray-500">No content loaded.</div>
                 )}
