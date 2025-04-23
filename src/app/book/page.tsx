@@ -281,6 +281,17 @@ export default function Book() {
     });
   }
 
+  useEffect(() => {
+    if (selectedWord) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [selectedWord]);
+
   function WordTranslationModal() {
     if (!selectedWord) return null;
     return (
@@ -302,12 +313,13 @@ export default function Book() {
           >
             ×
           </button>
-          <div className="flex-1 w-full flex flex-col justify-center items-center min-h-[80px]">
-            <div className="text-xs text-gray-400 mb-2">Translation for: <span className="font-semibold text-gray-700">{selectedWord}</span></div>
+          {/* First line: always show which word is being translated */}
+          <div className="w-full text-xs text-gray-400 mb-2 text-center border-b pb-2">Translation for: <span className="font-semibold text-gray-700">{selectedWord}</span></div>
+          <div className="flex-1 w-full flex flex-col justify-center items-center min-h-[80px] overflow-y-auto" style={{maxHeight: '30vh'}}>
             {wordLoading ? (
               <span className="text-indigo-500 text-base">Loading...</span>
             ) : (
-              <div className="text-base text-gray-700 text-center break-words whitespace-pre-line w-full" style={{height:'100%'}}>{wordTranslation}</div>
+              <div className="text-base text-gray-700 text-center break-words whitespace-pre-line w-full">{wordTranslation}</div>
             )}
           </div>
         </div>
