@@ -4,3 +4,6 @@ const TRANSLATION_CONFIG = {
   model: "llama-3.3-70b-versatile",
 };
 export default TRANSLATION_CONFIG;
+
+export const DEFAULT_WORD_PROMPT = 'Переведи слово на русский и дай ответа вида "слово - перевод - пример на английском"';
+export const DEFAULT_SENTENCE_PROMPT = 'Переведи на русский:';

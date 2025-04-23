@@ -1,10 +1,15 @@
 import TRANSLATION_CONFIG from "../config/translationConfig";
+import { DEFAULT_WORD_PROMPT, DEFAULT_SENTENCE_PROMPT } from "../config/translationConfig";
 
-export async function translateText(text: string, promptType: "sentence" | "word"): Promise<string> {
-  const prompt =
-    promptType === "sentence"
-      ? `Переведи на русский: ${text}`
-      : `Переведи слово на русский: ${text}`;
+export async function translateText(text: string, promptType: "sentence" | "word", customPrompt?: string): Promise<string> {
+  let prompt = "";
+  if (customPrompt) {
+    prompt = `${customPrompt} ${text}`;
+  } else {
+    prompt = promptType === "sentence"
+      ? `${DEFAULT_SENTENCE_PROMPT} ${text}`
+      : `${DEFAULT_WORD_PROMPT} ${text}`;
+  }
 
   const response = await fetch(TRANSLATION_CONFIG.apiUrl, {
     method: "POST",
@@ -23,6 +28,10 @@ export async function translateText(text: string, promptType: "sentence" | "word
     }),
   });
 
+  if (!response.ok) {
+    throw new Error("Translation API error");
+  }
+
   const data = await response.json();
-  return data.choices?.[0]?.message?.content || "No response";
+  return data.choices?.[0]?.message?.content || "";
 }

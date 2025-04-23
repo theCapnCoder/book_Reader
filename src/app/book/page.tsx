@@ -6,6 +6,65 @@ import { EpubService } from "../../services/epubService";
 import { EpubTocItem } from "../../types/epub";
 import { translateText } from "../../services/translationService";
 import { FiSettings, FiGlobe, FiCheck, FiLoader } from "react-icons/fi";
+import { DEFAULT_WORD_PROMPT, DEFAULT_SENTENCE_PROMPT } from "../../config/translationConfig";
+
+// LocalStorage keys
+const WORD_PROMPT_KEY = 'epub_word_prompt';
+const SENTENCE_PROMPT_KEY = 'epub_sentence_prompt';
+
+// Move SettingsModal outside of the Book component body so it is not re-created on every render
+function SettingsModal({
+  pendingWordPrompt,
+  setPendingWordPrompt,
+  pendingSentencePrompt,
+  setPendingSentencePrompt,
+  showSettings,
+  setShowSettings,
+  handleConfirmPrompts,
+}: {
+  pendingWordPrompt: string;
+  setPendingWordPrompt: (v: string) => void;
+  pendingSentencePrompt: string;
+  setPendingSentencePrompt: (v: string) => void;
+  showSettings: boolean;
+  setShowSettings: (v: boolean) => void;
+  handleConfirmPrompts: () => void;
+}) {
+  if (!showSettings) return null;
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-xs relative">
+        <button className="absolute top-2 right-2 text-gray-400 hover:text-gray-600" onClick={() => setShowSettings(false)} title="Close">✕</button>
+        <h2 className="text-lg font-bold mb-4">Settings</h2>
+        <div className="mb-3">
+          <label className="block text-xs text-gray-500 mb-1">Prompt for word translation:</label>
+          <textarea
+            className="w-full p-2 border rounded text-xs"
+            value={pendingWordPrompt}
+            onChange={e => setPendingWordPrompt(e.target.value)}
+            rows={2}
+          />
+        </div>
+        <div className="mb-3">
+          <label className="block text-xs text-gray-500 mb-1">Prompt for sentence/paragraph translation:</label>
+          <textarea
+            className="w-full p-2 border rounded text-xs"
+            value={pendingSentencePrompt}
+            onChange={e => setPendingSentencePrompt(e.target.value)}
+            rows={2}
+          />
+        </div>
+        <button
+          className="w-full mt-2 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded font-semibold text-sm transition"
+          onClick={handleConfirmPrompts}
+        >
+          Confirm
+        </button>
+        <div className="text-xs text-gray-500 mt-3">Prompts will only be saved after pressing Confirm. Defaults are used if you leave fields empty.</div>
+      </div>
+    </div>
+  );
+}
 
 export default function Book() {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -28,6 +87,36 @@ export default function Book() {
   const [wordTranslation, setWordTranslation] = useState<string | null>(null);
   const [wordLoading, setWordLoading] = useState(false);
   const [selectedWord, setSelectedWord] = useState<string | null>(null);
+  const [pendingWordPrompt, setPendingWordPrompt] = useState<string>("");
+  const [pendingSentencePrompt, setPendingSentencePrompt] = useState<string>("");
+  const [wordPrompt, setWordPrompt] = useState<string>("");
+  const [sentencePrompt, setSentencePrompt] = useState<string>("");
+
+  // On mount, load prompts from localStorage or use defaults
+  useEffect(() => {
+    const wp = typeof window !== 'undefined' ? localStorage.getItem(WORD_PROMPT_KEY) : null;
+    const sp = typeof window !== 'undefined' ? localStorage.getItem(SENTENCE_PROMPT_KEY) : null;
+    setWordPrompt(wp !== null ? wp : DEFAULT_WORD_PROMPT);
+    setSentencePrompt(sp !== null ? sp : DEFAULT_SENTENCE_PROMPT);
+  }, []);
+
+  // When opening settings, sync local state (only when modal opens, not on every render)
+  const handleOpenSettings = () => {
+    setPendingWordPrompt(wordPrompt);
+    setPendingSentencePrompt(sentencePrompt);
+    setShowSettings(true);
+  };
+
+  // Only update prompts on confirm, not on every keystroke
+  const handleConfirmPrompts = () => {
+    setWordPrompt(pendingWordPrompt);
+    setSentencePrompt(pendingSentencePrompt);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(WORD_PROMPT_KEY, pendingWordPrompt);
+      localStorage.setItem(SENTENCE_PROMPT_KEY, pendingSentencePrompt);
+    }
+    setShowSettings(false);
+  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setError(null);
@@ -124,12 +213,30 @@ export default function Book() {
     return paragraphs;
   }
 
+  async function handleWordClick(word: string) {
+    setSelectedWord(word);
+    setWordLoading(true);
+    setWordTranslation(null);
+    try {
+      const prompt = pendingWordPrompt || wordPrompt || DEFAULT_WORD_PROMPT;
+      const translated = await translateText(word, "word", prompt);
+      setWordTranslation(translated);
+    } catch {
+      setWordTranslation("Translation failed.");
+    } finally {
+      setWordLoading(false);
+    }
+  }
+
   const handleTranslate = async (sentence: string, idx: number) => {
     if (loadingIndices.has(idx)) return;
     setLoadingIndices(prev => new Set(prev).add(idx));
     try {
-      const translated = await translateText(sentence, "sentence");
+      const prompt = pendingSentencePrompt || sentencePrompt || DEFAULT_SENTENCE_PROMPT;
+      const translated = await translateText(sentence, "sentence", prompt);
       setTranslations(prev => ({ ...prev, [idx]: translated }));
+    } catch (e) {
+      setTranslations(prev => ({ ...prev, [idx]: "Translation failed." }));
     } finally {
       setLoadingIndices(prev => {
         const newSet = new Set(prev);
@@ -143,15 +250,16 @@ export default function Book() {
     if (paragraphLoadingIndices.has(idx)) return;
     setParagraphLoadingIndices(prev => new Set(prev).add(idx));
     try {
-      const translated = await translateText(paragraph, "sentence");
+      const prompt = pendingSentencePrompt || sentencePrompt || DEFAULT_SENTENCE_PROMPT;
+      const translated = await translateText(paragraph, "sentence", prompt);
       setParagraphTranslations(prev => ({ ...prev, [idx]: translated }));
     } catch (e) {
       setParagraphTranslations(prev => ({ ...prev, [idx]: "Translation failed." }));
     } finally {
       setParagraphLoadingIndices(prev => {
-        const copy = new Set(prev);
-        copy.delete(idx);
-        return copy;
+        const newSet = new Set(prev);
+        newSet.delete(idx);
+        return newSet;
       });
     }
   };
@@ -172,38 +280,6 @@ export default function Book() {
       );
     });
   }
-
-  async function handleWordClick(word: string) {
-    setSelectedWord(word);
-    setWordLoading(true);
-    setWordTranslation(null);
-    try {
-      const translated = await translateText(word, "word");
-      setWordTranslation(translated);
-    } catch {
-      setWordTranslation("Translation failed.");
-    } finally {
-      setWordLoading(false);
-    }
-  }
-
-  const SettingsModal = () => (
-    <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-xs relative">
-        <button className="absolute top-2 right-2 text-gray-400 hover:text-gray-600" onClick={() => setShowSettings(false)} title="Close">✕</button>
-        <h2 className="text-lg font-bold mb-4">Settings</h2>
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-gray-700">Original text</span>
-          <label className="inline-flex items-center cursor-pointer">
-            <input type="checkbox" className="sr-only peer" checked={showOriginal} onChange={() => setShowOriginal(v => !v)} />
-            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:bg-indigo-600 transition" />
-            <div className="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition peer-checked:translate-x-5" />
-          </label>
-        </div>
-        <div className="text-xs text-gray-500 mt-3">Toggle to switch between original (blurred) and sentence-by-sentence translation modes.</div>
-      </div>
-    </div>
-  );
 
   function WordTranslationModal() {
     if (!selectedWord) return null;
@@ -258,12 +334,22 @@ export default function Book() {
           <button
             className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 p-2"
             title="Settings"
-            onClick={() => setShowSettings(true)}
+            onClick={handleOpenSettings}
           >
             <FiSettings className="w-6 h-6" />
           </button>
         </div>
-        {showSettings && <SettingsModal />}
+        {showSettings && (
+          <SettingsModal
+            pendingWordPrompt={pendingWordPrompt}
+            setPendingWordPrompt={setPendingWordPrompt}
+            pendingSentencePrompt={pendingSentencePrompt}
+            setPendingSentencePrompt={setPendingSentencePrompt}
+            showSettings={showSettings}
+            setShowSettings={setShowSettings}
+            handleConfirmPrompts={handleConfirmPrompts}
+          />
+        )}
         {error && <div className="text-red-600 text-center mb-4">{error}</div>}
         {/* TOC view */}
         {!hrefParam && toc && (
