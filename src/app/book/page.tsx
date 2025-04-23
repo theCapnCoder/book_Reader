@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { EpubService } from "../../services/epubService";
 import { EpubTocItem } from "../../types/epub";
 import { translateText } from "../../services/translationService";
@@ -92,8 +92,6 @@ export default function Book() {
   const [chapterContent, setChapterContent] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const hrefParam = searchParams.get("href");
   const [selectedChapter, setSelectedChapter] = useState<EpubTocItem | null>(null);
   const [translations, setTranslations] = useState<{ [idx: number]: string }>({});
   const [loadingIndices, setLoadingIndices] = useState<Set<number>>(new Set());
@@ -158,34 +156,27 @@ export default function Book() {
   };
 
   useEffect(() => {
-    if (!file || !hrefParam || !toc) return;
-    const findChapter = (items: EpubTocItem[]): EpubTocItem | null => {
-      for (const item of items) {
-        if (item.href === hrefParam) return item;
-        if (item.children) {
-          const found = findChapter(item.children);
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-    const chapter = findChapter(toc);
-    setSelectedChapter(chapter);
-    setLoading(true);
+    if (!file || !toc) return;
+    setSelectedChapter(null);
     setChapterContent(null);
-    EpubService.getChapterContent(file, hrefParam)
-      .then((content) => setChapterContent(content || "No content available."))
-      .catch(() => setChapterContent("Failed to load chapter content."))
-      .finally(() => setLoading(false));
-  }, [file, hrefParam, toc]);
+  }, [file, toc]);
 
   const handleChapterClick = (item: EpubTocItem) => {
     if (!item.href) return;
-    router.push(`?href=${encodeURIComponent(item.href)}`);
+    setSelectedChapter(item);
+    setLoading(true);
+    setChapterContent(null);
+    if (file && item.href) {
+      EpubService.getChapterContent(file, item.href)
+        .then((content) => setChapterContent(content || "No content available."))
+        .catch(() => setChapterContent("Failed to load chapter content."))
+        .finally(() => setLoading(false));
+    }
   };
 
-  const handleBack = () => {
-    router.push("/book");
+  const handleBackToToc = () => {
+    setSelectedChapter(null);
+    setChapterContent(null);
   };
 
   const renderToc = (items: EpubTocItem[]) => (
@@ -383,7 +374,7 @@ export default function Book() {
         )}
         {error && <div className="text-red-600 text-center mb-4">{error}</div>}
         {/* TOC view */}
-        {!hrefParam && toc && (
+        {!selectedChapter && toc && (
           <div className="mb-6 w-full">
             <h3 className="text-lg font-semibold text-indigo-600 mb-2">Table of Contents</h3>
             <div className="overflow-auto border rounded p-3 bg-gray-50 w-full">
@@ -392,11 +383,11 @@ export default function Book() {
           </div>
         )}
         {/* Chapter view */}
-        {hrefParam && (
+        {selectedChapter && (
           <div className="w-full flex flex-col items-center">
             <button
               className="self-start mb-4 px-4 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded shadow"
-              onClick={handleBack}
+              onClick={handleBackToToc}
             >
               ← Back to Table of Contents
             </button>
@@ -404,7 +395,7 @@ export default function Book() {
               <div className="text-center text-indigo-500">Loading chapter...</div>
             ) : (
               <div className="prose prose-lg max-w-none w-full bg-gray-100 p-4 rounded shadow-inner min-h-[120px]">
-                <h3 className="text-lg font-bold text-indigo-700 mb-3">{selectedChapter?.label}</h3>
+                <h3 className="text-lg font-bold text-indigo-700 mb-3">{selectedChapter.label}</h3>
                 {chapterContent ? (
                   showOriginal
                     ? extractParagraphs(chapterContent).map((paragraph, idx) => (
