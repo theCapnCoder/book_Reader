@@ -25,6 +25,9 @@ export default function Book() {
   const [paragraphLoadingIndices, setParagraphLoadingIndices] = useState<Set<number>>(new Set());
   const [showSettings, setShowSettings] = useState(false);
   const [showOriginal, setShowOriginal] = useState(false);
+  const [wordTranslation, setWordTranslation] = useState<string | null>(null);
+  const [wordLoading, setWordLoading] = useState(false);
+  const [selectedWord, setSelectedWord] = useState<string | null>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setError(null);
@@ -153,6 +156,37 @@ export default function Book() {
     }
   };
 
+  function renderTextWithWordClicks(text: string) {
+    return text.split(/(\s+)/).map((word, i) => {
+      if (/^\s+$/.test(word)) {
+        return word;
+      }
+      return (
+        <span
+          key={i}
+          className="cursor-pointer hover:underline hover:text-indigo-600 transition"
+          onClick={() => handleWordClick(word)}
+        >
+          {word}
+        </span>
+      );
+    });
+  }
+
+  async function handleWordClick(word: string) {
+    setSelectedWord(word);
+    setWordLoading(true);
+    setWordTranslation(null);
+    try {
+      const translated = await translateText(word, "word");
+      setWordTranslation(translated);
+    } catch {
+      setWordTranslation("Translation failed.");
+    } finally {
+      setWordLoading(false);
+    }
+  }
+
   const SettingsModal = () => (
     <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-xs relative">
@@ -170,6 +204,40 @@ export default function Book() {
       </div>
     </div>
   );
+
+  function WordTranslationModal() {
+    if (!selectedWord) return null;
+    return (
+      <div className="fixed inset-0 z-50 flex items-end justify-center pointer-events-none">
+        {/* Backdrop for closing modal by clicking outside */}
+        <div
+          className="fixed inset-0 bg-black bg-opacity-10 z-40 pointer-events-auto"
+          onClick={() => { setSelectedWord(null); setWordTranslation(null); setWordLoading(false); }}
+        />
+        <div
+          className="relative w-full max-w-lg bg-white rounded-t-2xl shadow-2xl border-t border-gray-200 p-6 flex flex-col items-center animate-fadeIn z-50 pointer-events-auto"
+          style={{ minHeight: '120px', maxHeight: '40vh' }}
+          onClick={e => e.stopPropagation()}
+        >
+          <button
+            className="absolute top-3 right-4 text-gray-400 hover:text-gray-700 bg-white rounded-full w-8 h-8 flex items-center justify-center border border-gray-200 shadow"
+            onClick={() => { setSelectedWord(null); setWordTranslation(null); setWordLoading(false); }}
+            title="Close"
+          >
+            ×
+          </button>
+          <div className="flex-1 w-full flex flex-col justify-center items-center min-h-[80px]">
+            <div className="text-xs text-gray-400 mb-2">Translation for: <span className="font-semibold text-gray-700">{selectedWord}</span></div>
+            {wordLoading ? (
+              <span className="text-indigo-500 text-base">Loading...</span>
+            ) : (
+              <div className="text-base text-gray-700 text-center break-words whitespace-pre-line w-full" style={{height:'100%'}}>{wordTranslation}</div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col items-center py-8 px-2">
@@ -226,7 +294,7 @@ export default function Book() {
                       {extractParagraphs(chapterContent).map((paragraph, idx) => (
                         <div key={idx} className="mb-1">
                           <div className="flex items-center gap-2 justify-between">
-                            <span>{paragraph}</span>
+                            <span>{renderTextWithWordClicks(paragraph)}</span>
                             <button
                               className="ml-2 text-blue-600 hover:text-blue-900"
                               onClick={() => handleTranslateParagraph(paragraph, idx)}
@@ -252,7 +320,7 @@ export default function Book() {
                       {extractVisibleSentences(chapterContent).map((sentence, idx) => (
                         <div key={idx} className="mb-2">
                           <div className="flex items-center gap-2 justify-between">
-                            <span>{sentence.trim()}</span>
+                            <span>{renderTextWithWordClicks(sentence.trim())}</span>
                             <button
                               className="ml-2 text-blue-600 hover:text-blue-900"
                               onClick={() => handleTranslate(sentence, idx)}
@@ -282,6 +350,8 @@ export default function Book() {
           </div>
         )}
       </div>
+      {/* Word Translation Modal (always at root) */}
+      <WordTranslationModal />
       <footer className="text-gray-400 text-xs mt-8">&copy; {new Date().getFullYear()} EPUB Reader</footer>
     </div>
   );
