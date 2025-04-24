@@ -412,18 +412,28 @@ export default function Book() {
       <div className="w-full h-full bg-white rounded-none shadow-none p-0 m-0 flex flex-col flex-1">
         <div className="relative flex flex-col sm:flex-row items-center gap-4 mb-6 w-full min-h-[48px]">
           <input
+            id="epub-upload"
             type="file"
             accept=".epub"
             ref={fileInputRef}
             onChange={handleFileChange}
-            className="border rounded p-2 w-full sm:w-auto z-10"
+            className="hidden"
           />
+
+          <label
+            htmlFor="epub-upload"
+            className="flex items-center gap-2 bg-gray-200 text-black border rounded p-2 w-full sm:w-auto z-10 cursor-pointer hover:bg-gray-300"
+          >
+            <span>📱</span>
+            <span>Выбрать файл</span>
+          </label>
+
+
           {bookTitle && (
             <h2 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-xl font-semibold text-gray-800 whitespace-nowrap m-0 p-0">
               {bookTitle.length > 40 ? bookTitle.slice(0, 40) + '…' : bookTitle}
             </h2>
-          )}
-          <button
+          )}          <button
             className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 p-2"
             title="Settings"
             onClick={handleOpenSettings}
@@ -501,51 +511,51 @@ export default function Book() {
                 {chapterContent ? (
                   showOriginal
                     ? extractParagraphs(chapterContent).map((paragraph, idx) => (
-                        <div key={idx} className="mb-1">
-                          <div className="flex items-center gap-2 justify-between">
-                            <span>{renderTextWithWordClicks(paragraph)}</span>
-                            <button
-                              className="ml-2 text-blue-600 hover:text-blue-900"
-                              onClick={() => handleTranslateParagraph(paragraph, idx)}
-                              disabled={paragraphLoadingIndices.has(idx)}
-                              title="Translate paragraph"
-                            >
-                              {paragraphLoadingIndices.has(idx)
-                                ? <FiLoader className="animate-spin w-5 h-5" aria-label="loading" />
-                                : paragraphTranslations[idx]
-                                  ? <FiCheck className="text-green-600 w-5 h-5" aria-label="done" />
-                                  : <FiGlobe className="w-5 h-5" aria-label="translate" />
-                              }
-                            </button>
-                          </div>
-                          {paragraphTranslations[idx] && (
-                            <div className="text-gray-500 text-base leading-snug mt-1">{paragraphTranslations[idx]}</div>
-                          )}
+                      <div key={idx} className="mb-1">
+                        <div className="flex items-start gap-2 justify-between">
+                          <span>{renderTextWithWordClicks(paragraph)}</span>
+                          <button
+                            className="ml-2 text-blue-600 hover:text-blue-900"
+                            onClick={() => handleTranslateParagraph(paragraph, idx)}
+                            disabled={paragraphLoadingIndices.has(idx)}
+                            title="Translate paragraph"
+                          >
+                            {paragraphLoadingIndices.has(idx)
+                              ? <FiLoader className="animate-spin w-5 h-5" aria-label="loading" />
+                              : paragraphTranslations[idx]
+                                ? <FiCheck className="text-green-600 w-5 h-5" aria-label="done" />
+                                : <FiGlobe className="w-5 h-5" aria-label="translate" />
+                            }
+                          </button>
                         </div>
-                      ))
+                        {paragraphTranslations[idx] && (
+                          <div className="text-gray-500 text-base leading-snug mt-1">{paragraphTranslations[idx]}</div>
+                        )}
+                      </div>
+                    ))
                     : extractVisibleSentences(chapterContent).map((sentence, idx) => (
-                        <div key={idx} className="mb-2">
-                          <div className="flex items-center gap-2 justify-between">
-                            <span>{renderTextWithWordClicks(sentence.trim())}</span>
-                            <button
-                              className="ml-2 text-blue-600 hover:text-blue-900"
-                              onClick={() => handleTranslate(sentence, idx)}
-                              disabled={loadingIndices.has(idx)}
-                              title="Translate sentence"
-                            >
-                              {loadingIndices.has(idx)
-                                ? <FiLoader className="animate-spin w-5 h-5" aria-label="loading" />
-                                : translations[idx]
-                                  ? <FiCheck className="text-green-600 w-5 h-5" aria-label="done" />
-                                  : <FiGlobe className="w-5 h-5" aria-label="translate" />
-                              }
-                            </button>
-                          </div>
-                          {translations[idx] && (
-                            <div className="text-gray-500 text-base leading-snug mt-1">{translations[idx]}</div>
-                          )}
+                      <div key={idx} className="mb-2">
+                        <div className="flex items-center gap-2 justify-between">
+                          <span>{renderTextWithWordClicks(sentence.trim())}</span>
+                          <button
+                            className="ml-2 text-blue-600 hover:text-blue-900"
+                            onClick={() => handleTranslate(sentence, idx)}
+                            disabled={loadingIndices.has(idx)}
+                            title="Translate sentence"
+                          >
+                            {loadingIndices.has(idx)
+                              ? <FiLoader className="animate-spin w-5 h-5" aria-label="loading" />
+                              : translations[idx]
+                                ? <FiCheck className="text-green-600 w-5 h-5" aria-label="done" />
+                                : <FiGlobe className="w-5 h-5" aria-label="translate" />
+                            }
+                          </button>
                         </div>
-                      ))
+                        {translations[idx] && (
+                          <div className="text-gray-500 text-base leading-snug mt-1">{translations[idx]}</div>
+                        )}
+                      </div>
+                    ))
                 ) : (
                   <div className="text-gray-500">No content loaded.</div>
                 )}
