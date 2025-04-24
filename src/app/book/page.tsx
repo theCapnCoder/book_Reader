@@ -12,6 +12,7 @@ import { DEFAULT_WORD_PROMPT, DEFAULT_SENTENCE_PROMPT } from "../../config/trans
 // LocalStorage keys
 const WORD_PROMPT_KEY = 'epub_word_prompt';
 const SENTENCE_PROMPT_KEY = 'epub_sentence_prompt';
+const FONT_SIZE_KEY = 'epub_font_size';
 
 // Move SettingsModal outside of the Book component body so it is not re-created on every render
 function SettingsModal({
@@ -24,6 +25,8 @@ function SettingsModal({
   handleConfirmPrompts,
   showOriginal,
   setShowOriginal,
+  fontSize,
+  handleFontSizeChange,
 }: {
   pendingWordPrompt: string;
   setPendingWordPrompt: (v: string) => void;
@@ -34,6 +37,8 @@ function SettingsModal({
   handleConfirmPrompts: () => void;
   showOriginal: boolean;
   setShowOriginal: (v: boolean) => void;
+  fontSize: number;
+  handleFontSizeChange: (v: number) => void;
 }) {
   if (!showSettings) return null;
   return (
@@ -53,6 +58,19 @@ function SettingsModal({
             <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:bg-indigo-600 transition" />
             <div className="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition peer-checked:translate-x-5" />
           </label>
+        </div>
+        {/* Font size slider */}
+        <div className="mb-4 w-full flex flex-col items-center">
+          <label className="block text-xs text-gray-500 mb-1 w-full">Font size: <span className="font-semibold text-gray-700">{fontSize}px</span></label>
+          <input
+            type="range"
+            min={12}
+            max={32}
+            step={1}
+            value={fontSize}
+            onChange={e => handleFontSizeChange(Number(e.target.value))}
+            className="w-full accent-indigo-600"
+          />
         </div>
         <div className="mb-3 w-full">
           <label className="block text-xs text-gray-500 mb-1">Prompt for word translation:</label>
@@ -107,13 +125,16 @@ export default function Book() {
   const [pendingSentencePrompt, setPendingSentencePrompt] = useState<string>("");
   const [wordPrompt, setWordPrompt] = useState<string>("");
   const [sentencePrompt, setSentencePrompt] = useState<string>("");
+  const [fontSize, setFontSize] = useState<number>(18);
 
-  // On mount, load prompts from localStorage or use defaults
+  // On mount, load prompts and font size from localStorage or use defaults
   useEffect(() => {
     const wp = typeof window !== 'undefined' ? localStorage.getItem(WORD_PROMPT_KEY) : null;
     const sp = typeof window !== 'undefined' ? localStorage.getItem(SENTENCE_PROMPT_KEY) : null;
+    const fs = typeof window !== 'undefined' ? localStorage.getItem(FONT_SIZE_KEY) : null;
     setWordPrompt(wp !== null ? wp : DEFAULT_WORD_PROMPT);
     setSentencePrompt(sp !== null ? sp : DEFAULT_SENTENCE_PROMPT);
+    setFontSize(fs !== null && !isNaN(Number(fs)) ? Number(fs) : 18);
   }, []);
 
   // When opening settings, sync local state (only when modal opens, not on every render)
@@ -132,6 +153,14 @@ export default function Book() {
       localStorage.setItem(SENTENCE_PROMPT_KEY, pendingSentencePrompt);
     }
     setShowSettings(false);
+  };
+
+  // Handler for font size change
+  const handleFontSizeChange = (value: number) => {
+    setFontSize(value);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(FONT_SIZE_KEY, value.toString());
+    }
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -413,6 +442,8 @@ export default function Book() {
             handleConfirmPrompts={handleConfirmPrompts}
             showOriginal={showOriginal}
             setShowOriginal={setShowOriginal}
+            fontSize={fontSize}
+            handleFontSizeChange={handleFontSizeChange}
           />
         )}
         {error && <div className="text-red-600 text-center mb-4">{error}</div>}
@@ -465,7 +496,7 @@ export default function Book() {
                 <FiLoader className="animate-spin text-indigo-500 w-16 h-16" />
               </div>
             ) : (
-              <div className="prose prose-lg max-w-none w-full bg-gray-100 p-4 rounded shadow-inner min-h-[120px]">
+              <div className="prose prose-lg max-w-none w-full bg-gray-100 p-4 rounded shadow-inner min-h-[120px]" style={{ fontSize: fontSize + 'px' }}>
                 <h3 className="text-lg font-bold text-indigo-700 mb-3">{selectedChapter.label}</h3>
                 {chapterContent ? (
                   showOriginal
