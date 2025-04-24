@@ -496,7 +496,7 @@ export default function Book() {
                 <FiLoader className="animate-spin text-indigo-500 w-16 h-16" />
               </div>
             ) : (
-              <div className="prose prose-lg max-w-none w-full bg-gray-100 p-4 rounded shadow-inner min-h-[120px]" style={{ fontSize: fontSize + 'px' }}>
+              <div className="prose prose-lg max-w-none w-full bg-gray-100 p-4 rounded shadow-inner min-h-[120px]" style={{ fontSize: fontSize + 'px', color: '#1a202c' }}>
                 <h3 className="text-lg font-bold text-indigo-700 mb-3">{selectedChapter.label}</h3>
                 {chapterContent ? (
                   showOriginal
