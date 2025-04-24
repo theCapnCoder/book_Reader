@@ -208,6 +208,18 @@ export default function Book() {
     </ul>
   );
 
+  // Helper to flatten ToC
+  function flattenToc(items: EpubTocItem[]): EpubTocItem[] {
+    let flat: EpubTocItem[] = [];
+    for (const item of items) {
+      flat.push(item);
+      if (item.children && item.children.length > 0) {
+        flat = flat.concat(flattenToc(item.children));
+      }
+    }
+    return flat;
+  }
+
   function extractVisibleSentences(html: string): string[] {
     const tmp = document.createElement('div');
     tmp.innerHTML = html;
@@ -416,12 +428,38 @@ export default function Book() {
         {/* Chapter view */}
         {selectedChapter && (
           <div className="w-full flex flex-col items-center">
-            <button
-              className="self-start mb-4 px-4 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded shadow"
-              onClick={handleBackToToc}
-            >
-              ← Back to Table of Contents
-            </button>
+            {/* Top navigation controls */}
+            <div className="flex gap-2 mb-4 w-full items-center">
+              <button
+                className="px-4 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded shadow"
+                onClick={handleBackToToc}
+              >
+                ← Back to Table of Contents
+              </button>
+              {/* Previous/Next chapter navigation */}
+              {toc && (() => {
+                const flatToc = flattenToc(toc);
+                const currentIdx = selectedChapter ? flatToc.findIndex(item => item === selectedChapter) : -1;
+                return (
+                  <>
+                    <button
+                      className="px-4 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded shadow"
+                      onClick={() => currentIdx > 0 && handleChapterClick(flatToc[currentIdx - 1])}
+                      disabled={currentIdx <= 0}
+                    >
+                      ← Previous
+                    </button>
+                    <button
+                      className="px-4 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded shadow"
+                      onClick={() => currentIdx < flatToc.length - 1 && handleChapterClick(flatToc[currentIdx + 1])}
+                      disabled={currentIdx >= flatToc.length - 1}
+                    >
+                      Next →
+                    </button>
+                  </>
+                );
+              })()}
+            </div>
             {loading ? (
               <div className="text-center text-indigo-500">Loading chapter...</div>
             ) : (
@@ -480,6 +518,19 @@ export default function Book() {
                 )}
               </div>
             )}
+            {/* End of chapter navigation */}
+            {toc && (() => {
+              const flatToc = flattenToc(toc);
+              const currentIdx = selectedChapter ? flatToc.findIndex(item => item === selectedChapter) : -1;
+              return currentIdx < flatToc.length - 1 ? (
+                <button
+                  className="mt-8 px-6 py-3 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded shadow text-lg"
+                  onClick={() => handleChapterClick(flatToc[currentIdx + 1])}
+                >
+                  Next Chapter →
+                </button>
+              ) : null;
+            })()}
           </div>
         )}
       </div>
