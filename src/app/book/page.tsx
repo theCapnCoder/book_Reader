@@ -164,6 +164,11 @@ export default function Book() {
 
   const handleChapterClick = (item: EpubTocItem) => {
     if (!item.href) return;
+    // Reset all translation states when opening a new chapter
+    setTranslations({});
+    setLoadingIndices(new Set());
+    setParagraphTranslations({});
+    setParagraphLoadingIndices(new Set());
     setSelectedChapter(item);
     setLoading(true);
     setChapterContent(null);
