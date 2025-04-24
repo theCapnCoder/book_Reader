@@ -461,7 +461,9 @@ export default function Book() {
               })()}
             </div>
             {loading ? (
-              <div className="text-center text-indigo-500">Loading chapter...</div>
+              <div className="flex items-center justify-center w-full min-h-[300px] h-[40vh]">
+                <FiLoader className="animate-spin text-indigo-500 w-16 h-16" />
+              </div>
             ) : (
               <div className="prose prose-lg max-w-none w-full bg-gray-100 p-4 rounded shadow-inner min-h-[120px]">
                 <h3 className="text-lg font-bold text-indigo-700 mb-3">{selectedChapter.label}</h3>
@@ -518,25 +520,29 @@ export default function Book() {
                 )}
               </div>
             )}
-            {/* End of chapter navigation */}
-            {toc && (() => {
-              const flatToc = flattenToc(toc);
-              const currentIdx = selectedChapter ? flatToc.findIndex(item => item === selectedChapter) : -1;
-              return currentIdx < flatToc.length - 1 ? (
-                <button
-                  className="mt-8 px-6 py-3 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded shadow text-lg"
-                  onClick={() => handleChapterClick(flatToc[currentIdx + 1])}
-                >
-                  Next Chapter →
-                </button>
-              ) : null;
-            })()}
           </div>
         )}
       </div>
+      {/* Footer with Next Chapter button on the right */}
+      <footer className="text-gray-400 text-xs mt-8 w-full flex items-center justify-between">
+        <div className="flex-1 flex justify-center">
+          <span className="text-center">&copy; {new Date().getFullYear()} EPUB Reader</span>
+        </div>
+        {selectedChapter && toc && (() => {
+          const flatToc = flattenToc(toc);
+          const currentIdx = selectedChapter ? flatToc.findIndex(item => item === selectedChapter) : -1;
+          return currentIdx < flatToc.length - 1 ? (
+            <button
+              className="px-6 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded shadow text-base ml-auto"
+              onClick={() => handleChapterClick(flatToc[currentIdx + 1])}
+            >
+              Next Chapter →
+            </button>
+          ) : null;
+        })()}
+      </footer>
       {/* Word Translation Modal (always at root) */}
       <WordTranslationModal />
-      <footer className="text-gray-400 text-xs mt-8">&copy; {new Date().getFullYear()} EPUB Reader</footer>
     </div>
   );
 }
