@@ -379,7 +379,7 @@ export default function Book() {
           />
           {bookTitle && (
             <h2 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-xl font-semibold text-gray-800 whitespace-nowrap m-0 p-0">
-              {bookTitle}
+              {bookTitle.length > 40 ? bookTitle.slice(0, 40) + '…' : bookTitle}
             </h2>
           )}
           <button
