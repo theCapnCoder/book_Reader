@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { EpubService } from "../../services/epubService";
 import { EpubTocItem } from "../../types/epub";
 import { translateText } from "../../services/translationService";
-import { FiSettings, FiGlobe, FiCheck, FiLoader } from "react-icons/fi";
+import { FiSettings, FiGlobe, FiCheck, FiLoader, FiRefreshCw } from "react-icons/fi";
 import { DEFAULT_WORD_PROMPT, DEFAULT_SENTENCE_PROMPT } from "../../config/translationConfig";
 
 // Version 1.0.0
@@ -303,6 +303,20 @@ export default function Book() {
 
   function WordTranslationModal() {
     if (!selectedWord) return null;
+    // Refresh translation handler
+    const handleRefreshTranslation = async () => {
+      setWordLoading(true);
+      setWordTranslation(null);
+      try {
+        const prompt = pendingWordPrompt || wordPrompt || DEFAULT_WORD_PROMPT;
+        const translated = await translateText(selectedWord, "word", prompt);
+        setWordTranslation(translated);
+      } catch {
+        setWordTranslation("Translation failed.");
+      } finally {
+        setWordLoading(false);
+      }
+    };
     return (
       <div className="fixed inset-0 z-50 flex items-end justify-center pointer-events-none">
         {/* Backdrop for closing modal by clicking outside */}
@@ -311,8 +325,8 @@ export default function Book() {
           onClick={() => { setSelectedWord(null); setWordTranslation(null); setWordLoading(false); }}
         />
         <div
-          className="relative w-full max-w-lg bg-white rounded-t-2xl shadow-2xl border-t border-gray-200 p-6 flex flex-col items-center animate-fadeIn z-50 pointer-events-auto"
-          style={{ minHeight: '120px', maxHeight: '40vh' }}
+          className="relative w-full bg-white rounded-t-2xl shadow-2xl border-t border-gray-200 p-6 flex flex-col items-center animate-fadeIn z-50 pointer-events-auto"
+          style={{ minHeight: '120px', maxHeight: '90vh', width: '100%' }}
           onClick={e => e.stopPropagation()}
         >
           <button
@@ -323,12 +337,23 @@ export default function Book() {
             ×
           </button>
           {/* First line: always show which word is being translated */}
-          <div className="w-full text-xs text-gray-400 mb-2 text-center border-b pb-2">Translation for: <span className="font-semibold text-gray-700">{selectedWord}</span></div>
-          <div className="flex-1 w-full flex flex-col justify-center items-center min-h-[80px] overflow-y-auto" style={{maxHeight: '30vh'}}>
+          <div className="w-full text-xs text-gray-400 mb-2 text-center border-b pb-2 flex items-center justify-center gap-2">
+            <span>Translation for: <span className="font-semibold text-gray-700">{selectedWord}</span></span>
+            <button
+              className="ml-2 p-1 rounded-full hover:bg-indigo-100 text-indigo-600 hover:text-indigo-800 transition"
+              onClick={handleRefreshTranslation}
+              title="Refresh translation"
+              disabled={wordLoading}
+              style={{ lineHeight: 0 }}
+            >
+              <FiRefreshCw className={wordLoading ? "animate-spin" : ""} />
+            </button>
+          </div>
+          <div className="flex-1 w-full flex flex-col justify-center items-center min-h-[80px] overflow-y-auto" style={{ maxHeight: '80vh' }}>
             {wordLoading ? (
               <span className="text-indigo-500 text-base">Loading...</span>
             ) : (
-              <div className="text-base text-gray-700 text-center break-words whitespace-pre-line w-full">{wordTranslation}</div>
+              <div className="text-base text-gray-700 break-words whitespace-pre-line w-full">{wordTranslation}</div>
             )}
           </div>
         </div>
