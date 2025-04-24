@@ -38,10 +38,10 @@ function SettingsModal({
   if (!showSettings) return null;
   return (
     <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-xs relative">
+      <div className="bg-white rounded-lg shadow-lg p-6 w-1/2 max-w-2xl min-w-[340px] relative flex flex-col items-center">
         <button className="absolute top-2 right-2 text-gray-400 hover:text-gray-600" onClick={() => setShowSettings(false)} title="Close">✕</button>
         <h2 className="text-lg font-bold mb-4">Settings</h2>
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4 flex items-center justify-between w-full">
           <span className="text-gray-700 text-sm">Original text</span>
           <label className="inline-flex items-center cursor-pointer">
             <input
@@ -54,22 +54,22 @@ function SettingsModal({
             <div className="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition peer-checked:translate-x-5" />
           </label>
         </div>
-        <div className="mb-3">
+        <div className="mb-3 w-full">
           <label className="block text-xs text-gray-500 mb-1">Prompt for word translation:</label>
           <textarea
-            className="w-full p-2 border rounded text-xs"
+            className="w-full p-2 border rounded text-xs min-h-[120px] resize-none"
             value={pendingWordPrompt}
             onChange={e => setPendingWordPrompt(e.target.value)}
-            rows={2}
+            rows={5}
           />
         </div>
-        <div className="mb-3">
+        <div className="mb-3 w-full">
           <label className="block text-xs text-gray-500 mb-1">Prompt for sentence/paragraph translation:</label>
           <textarea
-            className="w-full p-2 border rounded text-xs"
+            className="w-full p-2 border rounded text-xs min-h-[120px] resize-none"
             value={pendingSentencePrompt}
             onChange={e => setPendingSentencePrompt(e.target.value)}
-            rows={2}
+            rows={5}
           />
         </div>
         <button
